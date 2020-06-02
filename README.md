@@ -7,3 +7,4 @@ checkout the Network tab for the time it take to load all the renderer
 (it take around 5-9 second loading the layers without any data source in them)
 
 is there anything we can do to improve it?
+![Rendere](/rendere.JPG)
