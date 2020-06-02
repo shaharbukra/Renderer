@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Create a FeatureLayer with client-side graphics - 4.15</title>
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.15/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.15/"></script>
+
+    <script>
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/layers/GroupLayer",
+        "esri/core/promiseUtils",
+        "esri/Graphic",
+        "esri/geometry/Point",
+        "esri/tasks/Locator",
+        "esri/widgets/LayerList"
+      ], function(
+        Map,
+        MapView,
+        FeatureLayer,
+        GroupLayer,
+        promiseUtils,
+        Graphic,
+        Point,
+        Locator,
+        LayerList
+      ) {
+        //  Creates a client-side FeatureLayer from an array of graphics
+        createFeatureLayer = (type, sampleDataForRender) => {
+          let renderer = createLayerRendere(type, sampleDataForRender);
+          let layer = new FeatureLayer({
+            source: [],
+            fields: [
+              {
+                name: "OBJECTID",
+                type: "oid"
+              },
+              {
+                name: "url",
+                type: "string"
+              },
+              {
+                name: "place",
+                type: "string"
+              },
+              {
+                name: "type",
+                type: "integer"
+              },
+              {
+                name: "count",
+                type: "integer"
+              }
+            ],
+            geometryType: type, //
+            spatialReference: { wkid: 4326 },
+            renderer: renderer
+          });
+
+          return layer;
+        };
+
+        createLayerRendere = (type, sampleDataForRender) => {
+          let uniqeRenderer = {
+            type: "unique-value", // autocasts as new UniqueValueRenderer()
+            field: "type"
+          };
+          let uniqueValueInfos = [];
+          switch (type) {
+            case "point":
+              uniqueValueInfos = sampleDataForRender.map(data => {
+                return {
+                  value: data.index,
+                  symbol: {
+                    type: "text", // autocasts as new TextSymbol()
+                    color: data.color,
+                    haloColor: "black",
+                    haloSize: "1px",
+                    text: data.char,
+                    xoffset: 3,
+                    yoffset: 3,
+                    font: {
+                      // autocasts as new Font()
+                      size: 12,
+                      family: "Josefin Slab",
+                      weight: "bold"
+                    }
+                  }
+                };
+              });
+
+              break;
+            case "polyline":
+              uniqueValueInfos = sampleDataForRender.map(data => {
+                return {
+                  value: data.index,
+                  symbol: {
+                    type: "simple-line", // autocasts as new SimpleLineSymbol()
+                    color: data.color,
+                    width: "2px",
+                    style: "short-dot"
+                  }
+                };
+              });
+              break;
+            case "polygon":
+              uniqueValueInfos = sampleDataForRender.map(data => {
+                return {
+                  value: data.index,
+                  symbol: {
+                    type: "simple-fill", // autocasts as new SimpleFillSymbol()
+                    color: [0, 0, 0, 0],
+                    outline: {
+                      color: data.color,
+                      width: 2
+                    }
+                  }
+                };
+              });
+              break;
+
+            default:
+              break;
+          }
+
+          uniqeRenderer.uniqueValueInfos = uniqueValueInfos;
+          return uniqeRenderer;
+        };
+
+        getRandomColor = () => {
+          var letters = "0123456789ABCDEF";
+          var color = "#";
+          for (var i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+          }
+          return color;
+        };
+
+        getRandomChar = (length = 1) => {
+          var result = "";
+          var characters =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+          var charactersLength = characters.length;
+          for (var i = 0; i < length; i++) {
+            result += characters.charAt(
+              Math.floor(Math.random() * charactersLength)
+            );
+          }
+          return result;
+        };
+
+        const view = new MapView({
+          map: new Map({
+            basemap: "gray-vector"
+          }),
+          container: "viewDiv",
+          extent: {
+            spatialReference: {
+              wkid: 102100
+            },
+            xmin: -14488954,
+            ymin: 3457304,
+            xmax: -10656095,
+            ymax: 5250211
+          },
+          popup: {
+            dockEnabled: true,
+            dockOptions: {
+              position: "top-right",
+              breakpoint: false
+            }
+          }
+        });
+
+        view.when(() => {
+          var layerList = new LayerList({
+            view: view
+          });
+          // Add widget to the top right corner of the view
+          view.ui.add(layerList, "top-right");
+        });
+        let sampleDataForRender = [...Array(800).keys()].map(i => {
+          let color = this.getRandomColor();
+          let char = this.getRandomChar();
+          return {
+            index: i,
+            color: color,
+            char: char
+          };
+        });
+
+        let groupLayer = new GroupLayer();
+        let pointLayer = createFeatureLayer("point", sampleDataForRender);
+        let polyline = createFeatureLayer("polyline", sampleDataForRender);
+        let polygon = createFeatureLayer("polygon", sampleDataForRender);
+        groupLayer.layers.addMany([pointLayer, polyline, polygon]);
+
+        view.map.add(groupLayer);
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>
